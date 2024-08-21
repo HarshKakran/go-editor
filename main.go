@@ -15,14 +15,29 @@ func main() {
 	fmt.Println("Press ctrl+c to exit or :wq to save and exit.")
 
 	// read file
-	file, err := os.ReadFile(filePath)
+	textBuffer, err := readAndPrint(filePath)
 	if err != nil {
-		fmt.Println(err)
-		return
+		panic(err)
 	}
 
-	fmt.Print(string(file), "\n")
+	// start writing
+	err = writeToFile(filePath, textBuffer)
+	if err != nil {
+		panic(err)
+	}
+}
 
+func clearScreen() {
+	cmd := exec.Command("clear")
+	cmd.Stdout = os.Stdout
+	cmd.Run()
+}
+
+func saveToFile(filePath string, textBuffer []byte) error {
+	return os.WriteFile(filePath, textBuffer, 0666)
+}
+
+func writeToFile(filePath string, textBuffer []byte) error {
 	var lines []string
 	scanner := bufio.NewScanner(os.Stdin)
 
@@ -40,22 +55,18 @@ func main() {
 		}
 	}
 
-	// var file []byte
+	textBuffer = append(textBuffer, []byte(strings.Join(lines, "\n"))...)
 
-	file = append(file, []byte(strings.Join(lines, "\n"))...)
+	return saveToFile(filePath, textBuffer)
+}
 
-	err = saveToFile(filePath, file)
+func readAndPrint(filePath string) ([]byte, error) {
+	file, err := os.ReadFile(filePath)
 	if err != nil {
-		fmt.Println(err)
+		return []byte{}, err
 	}
-}
 
-func clearScreen() {
-	cmd := exec.Command("clear")
-	cmd.Stdout = os.Stdout
-	cmd.Run()
-}
+	fmt.Print(string(file), "\n")
 
-func saveToFile(fileName string, textBuffer []byte) error {
-	return os.WriteFile(fileName, textBuffer, 0666)
+	return file, nil
 }
