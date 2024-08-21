@@ -9,39 +9,45 @@ import (
 )
 
 func main() {
+	filePath := os.Args[1]
+
 	clearScreen()
 	fmt.Println("Press ctrl+c to exit or :wq to save and exit.")
 
-	// write
-	{
-		var lines []string
-		scanner := bufio.NewScanner(os.Stdin)
+	// read file
+	file, err := os.ReadFile(filePath)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 
-		for {
-			fmt.Printf(">>")
+	fmt.Print(string(file), "\n")
 
-			if scanner.Scan() {
-				line := scanner.Text()
+	var lines []string
+	scanner := bufio.NewScanner(os.Stdin)
 
-				if line == ":wq" {
-					break
-				}
+	for {
+		fmt.Printf(">>")
 
-				lines = append(lines, line)
+		if scanner.Scan() {
+			line := scanner.Text()
+
+			if strings.ToLower(line) == ":wq" {
+				break
 			}
-		}
 
-		var textBuffer []byte
-
-		textBuffer = append(textBuffer, []byte(strings.Join(lines, "\n"))...)
-
-		err := saveToFile("output.txt", textBuffer)
-		if err != nil {
-			fmt.Println(err)
+			lines = append(lines, line)
 		}
 	}
 
-	// read
+	// var file []byte
+
+	file = append(file, []byte(strings.Join(lines, "\n"))...)
+
+	err = saveToFile(filePath, file)
+	if err != nil {
+		fmt.Println(err)
+	}
 }
 
 func clearScreen() {
