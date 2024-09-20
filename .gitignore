@@ -27,3 +27,5 @@ go.work.sum
 output*
 editor
 random_thoughs
+
+.vscode
