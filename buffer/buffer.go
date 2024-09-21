@@ -1,90 +1,60 @@
 package buffer
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"os"
-	"os/signal"
-	"strings"
-	"syscall"
-	"time"
 
-	"github.com/HarshKakran/go-editor/edi"
-	"github.com/HarshKakran/go-editor/handler"
 	"github.com/HarshKakran/go-editor/terminal"
-	"golang.org/x/sys/unix"
 )
 
 type Buffer struct {
-	UI       *edi.UI
-	FilePath string
-	Data     []string
+	data []byte
 }
 
-type EState struct {
-	Termios unix.Termios
-}
-
-func NewBuffer(ui *edi.UI, filePath string) *Buffer {
+func NewBuffer() *Buffer {
 	return &Buffer{
-		UI:       ui,
-		FilePath: filePath,
-		Data:     make([]string, 0),
+		data: make([]byte, 4),
 	}
 }
 
-func (b *Buffer) Load() {
-	fh, err := os.Open(b.FilePath)
-	if err != nil {
-		panic(err)
-	}
-	defer fh.Close()
-
-	scanner := bufio.NewScanner(fh)
-
-	for scanner.Scan() {
-		scannedText := scanner.Text()
-		fmt.Println(scannedText)
-		time.Sleep(200)
-		b.Data = append(b.Data, scanner.Text())
+func (b *Buffer) ProcessKeyPress() error {
+	// os.Stdin.Read can be used while reading in RAW mode.
+	n, err := os.Stdin.Read(b.data)
+	if err != nil || n == 0 {
+		if err != io.EOF {
+			fmt.Print("Error reading input: ", err)
+			return err
+		}
 	}
 
-	// fmt.Println(b.Data)
-}
-
-func (b *Buffer) SetFocus() {
-	oldState, err := terminal.MakeRaw(int(os.Stdin.Fd()))
-	if err != nil {
-		panic(err)
-	}
-
-	defer terminal.Restore(int(os.Stdin.Fd()), oldState)
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sig
-		terminal.Restore(int(os.Stdin.Fd()), oldState)
+	switch b.data[0] {
+	case '\x1b':
+		// ESC KEY
+		if n >= 3 && b.data[1] == '[' { //Arrow keys
+			switch b.data[2] {
+			case 'A':
+				fmt.Print("Up arrow pressed\r\n")
+			case 'B':
+				fmt.Print("Down arrow pressed\r\n")
+			case 'C':
+				fmt.Print("Right arrow pressed\r\n")
+			case 'D':
+				fmt.Print("Left arrow pressed\r\n")
+			}
+		}
+	case CtrlKey('c'):
+		fmt.Printf("Encountered ctrl+c. Exiting...")
+		terminal.ExitRawMode()
 		os.Exit(0)
-	}()
+	default:
+		fmt.Printf("Key Pressed: %v (ASCII Code: %d)\r\n", string(b.data[0]), b.data[0])
 
-	for {
-		str, err := b.UI.ReadChar()
-		if err != nil {
-			panic(err)
-		}
-
-		switch str {
-		case "[":
-			bfReader := bufio.NewReader(b.UI.R)
-			var x, y int
-			handler.HandleEscKeys(bfReader, &x, &y, b.Data)
-		default:
-			fmt.Println(str)
-		}
 	}
+
+	return nil
 }
 
-func (b *Buffer) GetData() string {
-	return strings.Join(b.Data, "\r\n")
+func CtrlKey(k byte) byte {
+	return k & 0x1f
 }

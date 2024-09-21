@@ -1,19 +1,30 @@
 package terminal
 
-import "golang.org/x/sys/unix"
+import (
+	"fmt"
+	"os"
 
-type State struct {
-	Termios unix.Termios
+	"golang.org/x/term"
+)
+
+var oldState *term.State
+
+func EnableRawMode() {
+	// Exit if stdin is disconnected.
+	if !term.IsTerminal(int(os.Stdin.Fd())) {
+		fmt.Println("Stdin is not connected to the terminal. Exiting...")
+		os.Exit(1)
+	}
+
+	var err error
+
+	// Enter raw mode
+	oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
+	if err != nil {
+		panic(err)
+	}
 }
 
-func MakeRaw(fd int) (*State, error) {
-	return makeraw(fd)
-}
-
-func Restore(fd int, state *State) error {
-	return restore(fd, state)
-}
-
-func GetState(fd int) (*State, error) {
-	return getState(fd)
+func ExitRawMode() {
+	term.Restore(int(os.Stdin.Fd()), oldState)
 }

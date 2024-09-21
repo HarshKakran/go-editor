@@ -2,24 +2,22 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/HarshKakran/go-editor/buffer"
-	"github.com/HarshKakran/go-editor/edi"
-	"github.com/HarshKakran/go-editor/handler"
+	"github.com/HarshKakran/go-editor/terminal"
 )
 
 func main() {
-	filePath := os.Args[0]
+	terminal.EnableRawMode()
+	defer terminal.ExitRawMode()
 
-	ui := edi.NewUI()
-	buffer := buffer.NewBuffer(ui, filePath)
+	buffer := buffer.NewBuffer()
 
-	buffer.Load()
+	for {
+		if err := buffer.ProcessKeyPress(); err != nil {
+			break
+		}
+	}
 
-	handler.ClearScreen()
-	fmt.Println("Press ctrl+c to exit or :wq to save and exit.")
-
-	fmt.Println(buffer.GetData())
-	buffer.SetFocus()
+	fmt.Println("Exiting Raw Mode")
 }
