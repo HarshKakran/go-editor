@@ -7,9 +7,25 @@ import (
 	"golang.org/x/term"
 )
 
-var oldState *term.State
+type Terminal struct {
+	Width    int
+	Height   int
+	oldState *term.State
+}
 
-func EnableRawMode() {
+func NewTerminal() (*Terminal, error) {
+	w, h, err := term.GetSize(int(os.Stdin.Fd()))
+	if err != nil {
+		return &Terminal{}, err
+	}
+
+	return &Terminal{
+		Width:  w,
+		Height: h,
+	}, nil
+}
+
+func (t *Terminal) EnableRawMode() error {
 	// Exit if stdin is disconnected.
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
 		fmt.Println("Stdin is not connected to the terminal. Exiting...")
@@ -19,12 +35,14 @@ func EnableRawMode() {
 	var err error
 
 	// Enter raw mode
-	oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
+	t.oldState, err = term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	return err
 }
 
-func ExitRawMode() {
-	term.Restore(int(os.Stdin.Fd()), oldState)
+func (t *Terminal) ExitRawMode() {
+	term.Restore(int(os.Stdin.Fd()), t.oldState)
 }
